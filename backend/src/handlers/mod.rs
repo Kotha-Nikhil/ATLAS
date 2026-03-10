@@ -1,0 +1,10 @@
+pub mod auth;
+pub mod patients;
+pub mod labs;
+pub mod imaging;
+pub mod consults;
+pub mod alerts;
+pub mod metrics;
+pub mod ai;
+pub mod ws;
+pub mod health;

@@ -1,0 +1,45 @@
+[package]
+name = "atlas-backend"
+version = "0.1.0"
+edition = "2021"
+default-run = "atlas-backend"
+
+[[bin]]
+name = "atlas-backend"
+path = "src/main.rs"
+
+[[bin]]
+name = "seed"
+path = "src/bin/seed.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws", "macros"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "json",
+    "migrate",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+jsonwebtoken = "9"
+argon2 = "0.5"
+password-hash = "0.5"
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1"
+anyhow = "1"
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "set-header"] }
+reqwest = { version = "0.12", features = ["json"] }
+rand = "0.8"
+futures = "0.3"
+
+[dev-dependencies]
