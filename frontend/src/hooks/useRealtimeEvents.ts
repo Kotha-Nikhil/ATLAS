@@ -10,6 +10,8 @@ export function useRealtimeEvents() {
   const updatePatient = usePatientStore((s) => s.updatePatient)
   const addPatient = usePatientStore((s) => s.addPatient)
   const incrementTick = usePatientStore((s) => s.incrementTick)
+  const setLoading = usePatientStore((s) => s.setLoading)
+  const setError = usePatientStore((s) => s.setError)
   const addAlert = useAlertStore((s) => s.addAlert)
   const setLastUpdateTime = useAlertStore((s) => s.setLastUpdateTime)
   const wsRef = useRef<WebSocket | null>(null)
@@ -19,6 +21,8 @@ export function useRealtimeEvents() {
     let cancelled = false
 
     async function loadInitialData() {
+      setLoading(true)
+      setError(null)
       try {
         const apiPatients = await fetchPatients()
         if (cancelled) return
@@ -35,9 +39,13 @@ export function useRealtimeEvents() {
 
         if (!cancelled) {
           setPatients(patientsWithDetails)
+          setLoading(false)
         }
       } catch (err) {
-        console.error('Failed to load patients:', err)
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load patients')
+          setLoading(false)
+        }
       }
     }
 
@@ -174,5 +182,5 @@ export function useRealtimeEvents() {
       if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
       wsRef.current?.close()
     }
-  }, [setPatients, updatePatient, addPatient, addAlert, setLastUpdateTime, incrementTick])
+  }, [setPatients, updatePatient, addPatient, addAlert, setLastUpdateTime, incrementTick, setLoading, setError])
 }

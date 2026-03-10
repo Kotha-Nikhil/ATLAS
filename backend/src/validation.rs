@@ -101,3 +101,175 @@ pub fn validate_create_consult(req: &CreateConsultRequest) -> Result<(), AppErro
     check_len("specialty", &req.specialty, MAX_SHORT_TEXT)?;
     Ok(())
 }
+
+pub fn validate_login_request(email: &str, password: &str) -> Result<(), AppError> {
+    if email.trim().is_empty() {
+        return Err(AppError::Validation("email cannot be empty".into()));
+    }
+    if email.len() > 254 {
+        return Err(AppError::Validation("email is too long".into()));
+    }
+    if !email.contains('@') {
+        return Err(AppError::Validation("email must contain @".into()));
+    }
+    if password.is_empty() {
+        return Err(AppError::Validation("password cannot be empty".into()));
+    }
+    if password.len() > 128 {
+        return Err(AppError::Validation("password is too long".into()));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::patient::CreatePatientRequest;
+    use crate::models::lab::CreateLabRequest;
+    use crate::models::imaging::CreateImagingRequest;
+    use crate::models::consult::CreateConsultRequest;
+
+    fn valid_patient_request() -> CreatePatientRequest {
+        CreatePatientRequest {
+            bed: "4".into(),
+            display_name: "R.T.".into(),
+            age: 77,
+            sex: "M".into(),
+            esi: "2".into(),
+            chief_complaint: "Neuro / AMS".into(),
+            chief_complaint_icon: None,
+            sepsis_watch: None,
+            owner_role: None,
+            milestone_description: None,
+            milestone_due_time: None,
+            ai_assist: None,
+            risk_flags: None,
+        }
+    }
+
+    #[test]
+    fn test_valid_patient() {
+        assert!(validate_create_patient(&valid_patient_request()).is_ok());
+    }
+
+    #[test]
+    fn test_empty_bed() {
+        let mut req = valid_patient_request();
+        req.bed = "".into();
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_bed_too_long() {
+        let mut req = valid_patient_request();
+        req.bed = "a".repeat(11);
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_invalid_sex() {
+        let mut req = valid_patient_request();
+        req.sex = "X".into();
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_age_negative() {
+        let mut req = valid_patient_request();
+        req.age = -1;
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_age_too_high() {
+        let mut req = valid_patient_request();
+        req.age = 200;
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_invalid_esi() {
+        let mut req = valid_patient_request();
+        req.esi = "6".into();
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_invalid_owner_role() {
+        let mut req = valid_patient_request();
+        req.owner_role = Some("INTERN".into());
+        assert!(validate_create_patient(&req).is_err());
+    }
+
+    #[test]
+    fn test_valid_lab() {
+        let req = CreateLabRequest {
+            name: "BMP".into(),
+            alert_threshold: None,
+        };
+        assert!(validate_create_lab(&req).is_ok());
+    }
+
+    #[test]
+    fn test_empty_lab_name() {
+        let req = CreateLabRequest {
+            name: "".into(),
+            alert_threshold: None,
+        };
+        assert!(validate_create_lab(&req).is_err());
+    }
+
+    #[test]
+    fn test_valid_imaging() {
+        let req = CreateImagingRequest {
+            imaging_type: "X-Ray Chest".into(),
+            alert_if_unread_minutes: Some(30),
+        };
+        assert!(validate_create_imaging(&req).is_ok());
+    }
+
+    #[test]
+    fn test_imaging_minutes_out_of_range() {
+        let req = CreateImagingRequest {
+            imaging_type: "CT Head".into(),
+            alert_if_unread_minutes: Some(2000),
+        };
+        assert!(validate_create_imaging(&req).is_err());
+    }
+
+    #[test]
+    fn test_valid_consult() {
+        let req = CreateConsultRequest {
+            specialty: "Cardiology".into(),
+        };
+        assert!(validate_create_consult(&req).is_ok());
+    }
+
+    #[test]
+    fn test_empty_consult() {
+        let req = CreateConsultRequest {
+            specialty: "".into(),
+        };
+        assert!(validate_create_consult(&req).is_err());
+    }
+
+    #[test]
+    fn test_valid_login() {
+        assert!(validate_login_request("user@test.com", "password").is_ok());
+    }
+
+    #[test]
+    fn test_login_empty_email() {
+        assert!(validate_login_request("", "password").is_err());
+    }
+
+    #[test]
+    fn test_login_no_at_sign() {
+        assert!(validate_login_request("usertest.com", "password").is_err());
+    }
+
+    #[test]
+    fn test_login_empty_password() {
+        assert!(validate_login_request("user@test.com", "").is_err());
+    }
+}

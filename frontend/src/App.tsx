@@ -66,6 +66,8 @@ function Dashboard() {
 
   const overdueFilter = usePatientStore((s) => s.overdueFilter)
   const setOverdueFilter = usePatientStore((s) => s.setOverdueFilter)
+  const loading = usePatientStore((s) => s.loading)
+  const error = usePatientStore((s) => s.error)
   const clearAuth = useAuthStore((s) => s.clearAuth)
 
   const toggleOverdue = useCallback(() => {
@@ -103,17 +105,39 @@ function Dashboard() {
 
       <TopBar />
 
-      <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <TopRiskCards />
-
-          <div className="border-t border-ed-border">
-            <PatientTable />
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-ed-teal border-t-transparent" />
+            <span className="text-sm text-ed-muted">Loading patient data...</span>
           </div>
-        </main>
+        </div>
+      ) : error ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3 max-w-sm text-center">
+            <span className="text-lg text-ed-red font-bold">Connection Error</span>
+            <span className="text-sm text-ed-muted">{error}</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 rounded bg-ed-teal px-4 py-2 text-sm font-bold text-white hover:bg-ed-teal/80 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-y-auto">
+            <TopRiskCards />
 
-        <Sidebar />
-      </div>
+            <div className="border-t border-ed-border">
+              <PatientTable />
+            </div>
+          </main>
+
+          <Sidebar />
+        </div>
+      )}
 
       {/* Bottom Action Bar */}
       <div className="flex items-center gap-2 border-t border-ed-border bg-ed-surface px-4 py-2">

@@ -28,6 +28,8 @@ pub async fn create_consult(
     Path(patient_id): Path<Uuid>,
     Json(body): Json<CreateConsultRequest>,
 ) -> Result<Json<Consult>, AppError> {
+    validation::validate_create_consult(&body)?;
+
     let consult = sqlx::query_as::<_, Consult>(
         "INSERT INTO consults (patient_id, specialty) VALUES ($1, $2) RETURNING *",
     )

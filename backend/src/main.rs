@@ -11,7 +11,7 @@ mod ws;
 
 use axum::{
     middleware as axum_mw,
-    routing::{delete, get, post, put},
+    routing::{get, post, put},
     Router,
 };
 use tokio::sync::broadcast;
@@ -77,9 +77,17 @@ async fn main() {
         ])
         .allow_credentials(true);
 
-    // Public routes (no auth required)
+    let login_limiter = middleware::rate_limit::RateLimiter::new(10, 60);
+
     let auth_routes = Router::new()
-        .route("/login", post(handlers::auth::login))
+        .route(
+            "/login",
+            post(handlers::auth::login)
+                .layer(axum_mw::from_fn_with_state(
+                    login_limiter.clone(),
+                    middleware::rate_limit::rate_limit,
+                )),
+        )
         .route("/logout", post(handlers::auth::logout));
 
     // Protected patient routes
@@ -99,10 +107,16 @@ async fn main() {
         .route("/", get(handlers::alerts::list_alerts))
         .route("/{id}/dismiss", post(handlers::alerts::dismiss_alert));
 
+    let ai_limiter = middleware::rate_limit::RateLimiter::new(20, 60);
+
     let ai_routes = Router::new()
         .route("/suggest", post(handlers::ai::suggest))
         .route("/top5", post(handlers::ai::top5))
-        .route("/handoff", post(handlers::ai::handoff));
+        .route("/handoff", post(handlers::ai::handoff))
+        .layer(axum_mw::from_fn_with_state(
+            ai_limiter.clone(),
+            middleware::rate_limit::rate_limit,
+        ));
 
     // Protected routes with auth + audit middleware
     let protected = Router::new()

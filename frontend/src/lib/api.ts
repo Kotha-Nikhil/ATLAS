@@ -32,6 +32,8 @@ async function request<T>(
 
   if (res.status === 401) {
     clearToken()
+    const { useAuthStore } = await import('@/store/authStore')
+    useAuthStore.getState().clearAuth()
     window.location.href = '/login'
     throw new Error('Unauthorized')
   }
@@ -68,6 +70,10 @@ export function login(email: string, password: string) {
 
 export function getMe() {
   return request<ApiUser>('/api/auth/me')
+}
+
+export function refreshToken() {
+  return request<LoginResponse>('/api/auth/refresh', { method: 'POST' })
 }
 
 // --- Patients ---

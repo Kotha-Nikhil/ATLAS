@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { login, setToken, clearToken } from '@/lib/api'
+import { refreshToken, setToken, clearToken } from '@/lib/api'
 
 const WARNING_BEFORE_MS = 2 * 60 * 1000
 
@@ -9,7 +9,6 @@ export function SessionTimeoutModal() {
   const [showWarning, setShowWarning] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const tokenExpiresAt = useAuthStore((s) => s.tokenExpiresAt)
-  const user = useAuthStore((s) => s.user)
   const setAuth = useAuthStore((s) => s.setAuth)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
@@ -37,9 +36,8 @@ export function SessionTimeoutModal() {
   }, [tokenExpiresAt, clearAuth, navigate])
 
   const handleExtend = useCallback(async () => {
-    if (!user) return
     try {
-      const res = await login(user.email, 'password123')
+      const res = await refreshToken()
       setToken(res.token)
       const payload = JSON.parse(atob(res.token.split('.')[1]))
       setAuth(res.user, payload.exp * 1000)
@@ -49,7 +47,7 @@ export function SessionTimeoutModal() {
       clearToken()
       navigate('/login', { replace: true })
     }
-  }, [user, setAuth, clearAuth, navigate])
+  }, [setAuth, clearAuth, navigate])
 
   const handleLogout = useCallback(() => {
     clearAuth()
@@ -60,9 +58,9 @@ export function SessionTimeoutModal() {
   if (!showWarning) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
       <div className="w-full max-w-sm rounded-lg border border-ed-orange bg-ed-surface p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-ed-orange mb-2">Session Expiring</h2>
+        <h2 id="session-timeout-title" className="text-lg font-bold text-ed-orange mb-2">Session Expiring</h2>
         <p className="text-sm text-ed-muted mb-4">
           Your session will expire in <span className="font-bold text-ed-text">{secondsLeft}s</span>.
           For HIPAA compliance, sessions are limited to 15 minutes.

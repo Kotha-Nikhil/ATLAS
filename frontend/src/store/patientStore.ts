@@ -6,6 +6,8 @@ interface PatientStore {
   metrics: DashboardMetrics
   overdueFilter: boolean
   tickCount: number
+  loading: boolean
+  error: string | null
   setPatients: (patients: Patient[]) => void
   updatePatient: (id: string, updates: Partial<Patient>) => void
   addPatient: (patient: Patient) => void
@@ -13,6 +15,8 @@ interface PatientStore {
   setOverdueFilter: (on: boolean) => void
   recomputeMetrics: () => void
   incrementTick: () => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
 function computeMetrics(patients: Patient[]): DashboardMetrics {
@@ -55,6 +59,8 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   },
   overdueFilter: false,
   tickCount: 0,
+  loading: true,
+  error: null,
 
   setPatients: (patients) => {
     set({ patients, metrics: computeMetrics(patients) })
@@ -78,6 +84,8 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   },
 
   setOverdueFilter: (on) => set({ overdueFilter: on }),
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
 
   recomputeMetrics: () => {
     set({ metrics: computeMetrics(get().patients) })

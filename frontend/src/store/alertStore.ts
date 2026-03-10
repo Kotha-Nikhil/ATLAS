@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Alert } from '@/types'
+import { dismissAlertApi } from '@/lib/api'
 
 const MAX_VISIBLE_ALERTS = 3
 const AUTO_DISMISS_MS = 8_000
@@ -89,6 +90,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
     set({
       alerts: get().alerts.filter((a) => a.id !== id),
     })
+    dismissAlertApi(id).catch(() => {})
   },
 
   clearAll: () => {

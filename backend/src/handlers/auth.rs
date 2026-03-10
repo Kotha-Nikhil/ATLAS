@@ -6,11 +6,14 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use crate::error::AppError;
 use crate::models::user::*;
 use crate::state::AppState;
+use crate::validation;
 
 pub async fn login(
     State(state): State<AppState>,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AppError> {
+    validation::validate_login_request(&body.email, &body.password)?;
+
     let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1 AND is_active = TRUE")
         .bind(&body.email)
         .fetch_optional(&state.db)
