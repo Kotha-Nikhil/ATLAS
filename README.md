@@ -64,6 +64,9 @@ Main board with columns:
 ### Pending Results Sidebar (Right)
 - **Imaging** — CT, X-ray, US orders with status; unread results highlighted.
 - **Labs** — Pending and resulted labs; critical values in red.
+- **Consults** — Active specialist consultations (Neurology, GI, Orthopedics) with status.
+
+![Pending Results & Consults](docs/pending-results.png)
 
 ### Bottom Action Bar
 - **Top 5 Sick**, **Fast Dispos**, **Overdue**, **Handoff**, **AI Assist**
@@ -71,6 +74,16 @@ Main board with columns:
 - **Last update** — Recency of data.
 
 **Click any patient row** to open a slide-over panel with full details, vitals trends, labs, imaging, and consults.
+
+### Patient Detail Panel
+
+The slide-over shows clinical summary, risk flags, next milestone, AI suggestions, and vital sign trends:
+
+![Patient Detail — Clinical Summary & Vitals](docs/patient-summary.png)
+
+Vitals charts (HR, SpO2, BP) and lab results with critical flagging:
+
+![Patient Detail — Vitals Charts & Labs](docs/patient-detail.png)
 
 ---
 
@@ -153,9 +166,12 @@ Vite will print a local URL, e.g. `http://localhost:5173` or `http://localhost:5
 ### Step 7: Log In
 
 1. Open the URL from Step 6 in your browser.
-2. Use:
-   - **Email:** `dr.chen@atlas.ed`
-   - **Password:** `password123`
+2. Use the demo credentials shown on the login screen:
+
+![ATLAS Login](docs/login.png)
+
+- **Email:** `dr.chen@atlas.ed`
+- **Password:** `password123`
 
 ### One-Command Option
 
@@ -251,9 +267,11 @@ This script starts the database, seeds data, runs the backend, and then the fron
 
 ### Interoperability
 - FHIR R4 Patient read/create
-- SMART on FHIR sandbox import
+- SMART on FHIR sandbox import — search and import synthetic patients from the SMART Health IT sandbox
 - HL7 v2 ADT → FHIR pipeline
 - FHIR CapabilityStatement for client discovery
+
+![SMART on FHIR Import](docs/fhir-import.png)
 
 ### Security & Compliance
 - JWT auth with 15-minute expiry
