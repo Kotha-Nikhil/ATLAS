@@ -8,3 +8,4 @@ pub mod metrics;
 pub mod ai;
 pub mod ws;
 pub mod health;
+pub mod fhir;
