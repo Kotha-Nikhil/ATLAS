@@ -1,9 +1,68 @@
 import { useEffect, useRef } from 'react'
 import { usePatientStore } from '@/store/patientStore'
 import { useAlertStore } from '@/store/alertStore'
-import { fetchPatients, fetchPatientLabs, fetchPatientImaging, getWsUrl } from '@/lib/api'
+import { fetchPatientsFull, getWsUrl } from '@/lib/api'
 import { mapPatient, mapLab, mapImaging, mapAlert } from '@/lib/mappers'
-import type { Alert } from '@/types'
+import type { Alert, Lab, ImagingOrder, Patient } from '@/types'
+import type { ApiLab, ApiImaging, ApiPatient, ApiAlert } from '@/lib/api'
+
+interface WsLabResulted {
+  type: 'lab_resulted'
+  patient_id: string
+  lab: ApiLab
+}
+
+interface WsImagingUpdated {
+  type: 'imaging_updated'
+  patient_id: string
+  imaging: ApiImaging
+}
+
+interface WsNewPatient {
+  type: 'new_patient' | 'high_acuity_arrival'
+  patient: ApiPatient
+}
+
+interface WsAlertFired {
+  type: 'alert_fired'
+  alert: ApiAlert
+}
+
+interface WsSepsisEscalation {
+  type: 'sepsis_escalation'
+  patient_id: string
+  message: string
+  urgency?: string
+}
+
+interface WsTick {
+  type: 'tick'
+}
+
+interface WsMetricsUpdated {
+  type: 'metrics_updated'
+}
+
+type WsMessage =
+  | WsLabResulted
+  | WsImagingUpdated
+  | WsNewPatient
+  | WsAlertFired
+  | WsSepsisEscalation
+  | WsTick
+  | WsMetricsUpdated
+
+function isWsMessage(data: unknown): data is WsMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'type' in data &&
+    typeof (data as Record<string, unknown>).type === 'string'
+  )
+}
+
+const MIN_RECONNECT_MS = 1000
+const MAX_RECONNECT_MS = 30000
 
 export function useRealtimeEvents() {
   const setPatients = usePatientStore((s) => s.setPatients)
@@ -16,29 +75,24 @@ export function useRealtimeEvents() {
   const setLastUpdateTime = useAlertStore((s) => s.setLastUpdateTime)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reconnectDelay = useRef(MIN_RECONNECT_MS)
 
   useEffect(() => {
     let cancelled = false
+
+    async function loadAllPatients() {
+      const apiPatients = await fetchPatientsFull()
+      if (cancelled) return []
+      return apiPatients.map((ap) => mapPatient(ap))
+    }
 
     async function loadInitialData() {
       setLoading(true)
       setError(null)
       try {
-        const apiPatients = await fetchPatients()
-        if (cancelled) return
-
-        const patientsWithDetails = await Promise.all(
-          apiPatients.map(async (ap) => {
-            const [labs, imaging] = await Promise.all([
-              fetchPatientLabs(ap.id).catch(() => []),
-              fetchPatientImaging(ap.id).catch(() => []),
-            ])
-            return mapPatient({ ...ap, labs, imaging })
-          }),
-        )
-
+        const patients = await loadAllPatients()
         if (!cancelled) {
-          setPatients(patientsWithDetails)
+          setPatients(patients)
           setLoading(false)
         }
       } catch (err) {
@@ -57,18 +111,34 @@ export function useRealtimeEvents() {
       const ws = new WebSocket(getWsUrl())
       wsRef.current = ws
 
+      ws.onopen = () => {
+        reconnectDelay.current = MIN_RECONNECT_MS
+      }
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          handleWsEvent(data)
+          if (isWsMessage(data)) {
+            handleWsEvent(data)
+          }
         } catch {
-          // ignore malformed messages
+          // malformed JSON
         }
       }
 
       ws.onclose = () => {
         if (!cancelled) {
-          reconnectTimeout.current = setTimeout(connect, 3000)
+          const delay = reconnectDelay.current
+          reconnectDelay.current = Math.min(delay * 2, MAX_RECONNECT_MS)
+          reconnectTimeout.current = setTimeout(async () => {
+            try {
+              const patients = await loadAllPatients()
+              if (!cancelled) setPatients(patients)
+            } catch {
+              // resync failed; will retry on next reconnect
+            }
+            connect()
+          }, delay)
         }
       }
 
@@ -77,24 +147,22 @@ export function useRealtimeEvents() {
       }
     }
 
-    function handleWsEvent(data: Record<string, unknown>) {
+    function handleWsEvent(msg: WsMessage) {
       const now = new Date()
 
-      switch (data.type) {
+      switch (msg.type) {
         case 'lab_resulted': {
-          const patientId = data.patient_id as string
-          const labData = data.lab as Record<string, unknown>
-          if (labData) {
-            const lab = mapLab(labData as never)
+          if (msg.lab) {
+            const lab: Lab = mapLab(msg.lab)
             const patients = usePatientStore.getState().patients
-            const patient = patients.find((p) => p.id === patientId)
+            const patient = patients.find((p) => p.id === msg.patient_id)
             if (patient) {
               const existingIdx = patient.labs.findIndex((l) => l.id === lab.id)
-              const updatedLabs =
+              const updatedLabs: Lab[] =
                 existingIdx >= 0
                   ? patient.labs.map((l) => (l.id === lab.id ? lab : l))
                   : [...patient.labs, lab]
-              updatePatient(patientId, { labs: updatedLabs })
+              updatePatient(msg.patient_id, { labs: updatedLabs })
             }
           }
           setLastUpdateTime(now)
@@ -102,19 +170,17 @@ export function useRealtimeEvents() {
         }
 
         case 'imaging_updated': {
-          const patientId = data.patient_id as string
-          const imgData = data.imaging as Record<string, unknown>
-          if (imgData) {
-            const img = mapImaging(imgData as never)
+          if (msg.imaging) {
+            const img: ImagingOrder = mapImaging(msg.imaging)
             const patients = usePatientStore.getState().patients
-            const patient = patients.find((p) => p.id === patientId)
+            const patient = patients.find((p) => p.id === msg.patient_id)
             if (patient) {
               const existingIdx = patient.imaging.findIndex((i) => i.id === img.id)
-              const updatedImaging =
+              const updatedImaging: ImagingOrder[] =
                 existingIdx >= 0
                   ? patient.imaging.map((i) => (i.id === img.id ? img : i))
                   : [...patient.imaging, img]
-              updatePatient(patientId, { imaging: updatedImaging })
+              updatePatient(msg.patient_id, { imaging: updatedImaging })
             }
           }
           setLastUpdateTime(now)
@@ -123,9 +189,8 @@ export function useRealtimeEvents() {
 
         case 'new_patient':
         case 'high_acuity_arrival': {
-          const patientData = data.patient as Record<string, unknown>
-          if (patientData) {
-            const patient = mapPatient(patientData as never)
+          if (msg.patient) {
+            const patient: Patient = mapPatient(msg.patient)
             addPatient(patient)
           }
           setLastUpdateTime(now)
@@ -133,9 +198,8 @@ export function useRealtimeEvents() {
         }
 
         case 'alert_fired': {
-          const alertData = data.alert as Record<string, unknown>
-          if (alertData) {
-            const alert = mapAlert(alertData as never)
+          if (msg.alert) {
+            const alert = mapAlert(msg.alert)
             addAlert(alert)
           }
           setLastUpdateTime(now)
@@ -143,17 +207,14 @@ export function useRealtimeEvents() {
         }
 
         case 'sepsis_escalation': {
-          const patientId = data.patient_id as string
-          const message = data.message as string
-          const urgency = (data.urgency as string) || 'warning'
           const alert: Alert = {
-            id: `sepsis-${patientId}-${Date.now()}`,
-            patientId,
+            id: `sepsis-${msg.patient_id}-${Date.now()}`,
+            patientId: msg.patient_id,
             patientName: '',
             bed: '',
             type: 'sepsis-escalation',
-            message,
-            urgency: urgency as Alert['urgency'],
+            message: msg.message,
+            urgency: (msg.urgency as Alert['urgency']) || 'warning',
             timestamp: now,
             dismissed: false,
           }

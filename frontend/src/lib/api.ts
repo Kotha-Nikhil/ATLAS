@@ -168,6 +168,36 @@ export function fetchPatients() {
   return request<ApiPatient[]>('/api/patients')
 }
 
+export interface ApiPatientFull {
+  id: string
+  bed: string
+  display_name: string
+  age: number
+  sex: string
+  esi: string
+  chief_complaint: string
+  chief_complaint_icon: string | null
+  risk_score: number
+  disposition_status: string
+  sepsis_watch: boolean
+  owner_role: string
+  time_in: string
+  milestone_description: string | null
+  milestone_due_time: string | null
+  milestone_is_overdue: boolean
+  ai_assist: string | null
+  created_at: string
+  updated_at: string
+  risk_flags: ApiRiskFlag[]
+  labs: ApiLab[]
+  imaging: ApiImaging[]
+  consults: ApiConsult[]
+}
+
+export function fetchPatientsFull() {
+  return request<ApiPatientFull[]>('/api/patients/full')
+}
+
 export function fetchPatient(id: string) {
   return request<ApiPatient>(`/api/patients/${id}`)
 }

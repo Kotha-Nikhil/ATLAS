@@ -24,6 +24,62 @@ pub async fn list_patients(
     Ok(Json(patients))
 }
 
+pub async fn list_patients_full(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<PatientDto>>, AppError> {
+    let patients = sqlx::query_as::<_, Patient>(
+        "SELECT * FROM patients WHERE disposition_status != 'discharged' ORDER BY risk_score DESC",
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let patient_ids: Vec<Uuid> = patients.iter().map(|p| p.id).collect();
+
+    let all_labs = sqlx::query_as::<_, crate::models::lab::Lab>(
+        "SELECT * FROM labs WHERE patient_id = ANY($1) ORDER BY ordered_at",
+    )
+    .bind(&patient_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let all_imaging = sqlx::query_as::<_, crate::models::imaging::ImagingOrder>(
+        "SELECT * FROM imaging_orders WHERE patient_id = ANY($1) ORDER BY ordered_at",
+    )
+    .bind(&patient_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let all_risk_flags = sqlx::query_as::<_, RiskFlag>(
+        "SELECT * FROM risk_flags WHERE patient_id = ANY($1)",
+    )
+    .bind(&patient_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let all_consults = sqlx::query_as::<_, crate::models::consult::Consult>(
+        "SELECT * FROM consults WHERE patient_id = ANY($1) ORDER BY called_at",
+    )
+    .bind(&patient_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let dtos: Vec<PatientDto> = patients
+        .into_iter()
+        .map(|p| {
+            let pid = p.id;
+            PatientDto {
+                labs: all_labs.iter().filter(|l| l.patient_id == pid).cloned().collect(),
+                imaging: all_imaging.iter().filter(|i| i.patient_id == pid).cloned().collect(),
+                risk_flags: all_risk_flags.iter().filter(|f| f.patient_id == pid).cloned().collect(),
+                consults: all_consults.iter().filter(|c| c.patient_id == pid).cloned().collect(),
+                patient: p,
+            }
+        })
+        .collect();
+
+    Ok(Json(dtos))
+}
+
 pub async fn get_patient(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,

@@ -93,6 +93,7 @@ async fn main() {
     // Protected patient routes
     let patient_routes = Router::new()
         .route("/", get(handlers::patients::list_patients).post(handlers::patients::create_patient))
+        .route("/full", get(handlers::patients::list_patients_full))
         .route("/{id}", get(handlers::patients::get_patient)
             .put(handlers::patients::update_patient)
             .delete(handlers::patients::discharge_patient))
@@ -129,9 +130,15 @@ async fn main() {
         .layer(axum_mw::from_fn_with_state(state.clone(), middleware::audit::audit_log))
         .layer(axum_mw::from_fn_with_state(state.clone(), middleware::auth::require_auth));
 
+    let fhir_routes = Router::new()
+        .route("/metadata", get(handlers::fhir::capability_statement))
+        .route("/Patient", post(handlers::fhir::create_fhir_patient))
+        .route("/Patient/{id}", get(handlers::fhir::get_fhir_patient));
+
     let app = Router::new()
         .route("/health", get(handlers::health::health))
         .nest("/api/auth", auth_routes)
+        .nest("/api/fhir", fhir_routes)
         .nest("/api", protected)
         .route("/ws", get(handlers::ws::ws_upgrade))
         .layer(axum_mw::from_fn(middleware::hipaa::hipaa_headers))
