@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { refreshToken, setToken, clearToken } from '@/lib/api'
@@ -55,10 +55,24 @@ export function SessionTimeoutModal() {
     navigate('/login', { replace: true })
   }, [clearAuth, navigate])
 
+  const extendRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (showWarning) extendRef.current?.focus()
+  }, [showWarning])
+
   if (!showWarning) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="session-timeout-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') handleLogout()
+      }}
+    >
       <div className="w-full max-w-sm rounded-lg border border-ed-orange bg-ed-surface p-6 shadow-xl">
         <h2 id="session-timeout-title" className="text-lg font-bold text-ed-orange mb-2">Session Expiring</h2>
         <p className="text-sm text-ed-muted mb-4">
@@ -67,12 +81,15 @@ export function SessionTimeoutModal() {
         </p>
         <div className="flex gap-3">
           <button
+            ref={extendRef}
+            type="button"
             onClick={handleExtend}
             className="flex-1 rounded bg-ed-teal py-2 text-sm font-bold text-white hover:bg-ed-teal/80 transition-colors"
           >
             Extend Session
           </button>
           <button
+            type="button"
             onClick={handleLogout}
             className="flex-1 rounded border border-ed-border py-2 text-sm font-medium text-ed-muted hover:bg-ed-surface transition-colors"
           >

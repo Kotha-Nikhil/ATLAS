@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents'
 import { usePatientStore } from '@/store/patientStore'
-import { useAlertStore } from '@/store/alertStore'
 import { useAuthStore } from '@/store/authStore'
 import { TopBar } from '@/components/layout/TopBar'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { UserBadge } from '@/components/layout/UserBadge'
+import { ActionBar } from '@/components/layout/ActionBar'
 import { TopRiskCards } from '@/components/command/TopRiskCards'
 import { PatientTable } from '@/components/patients/PatientTable'
 import { PendingResultsPanel } from '@/components/command/PendingResultsPanel'
@@ -13,42 +14,11 @@ import { Top5SickModal } from '@/components/overlays/Top5SickModal'
 import { HandoffModal } from '@/components/overlays/HandoffModal'
 import { FastDispoPanel } from '@/components/command/FastDispoPanel'
 import { AIAssistPanel } from '@/components/command/AIAssistPanel'
+import { MetricsPanel } from '@/components/command/MetricsPanel'
+import { AnalyticsPanel } from '@/components/command/AnalyticsPanel'
+import { FHIRImportPanel } from '@/components/command/FHIRImportPanel'
 import { LoginPage } from '@/components/auth/LoginPage'
 import { SessionTimeoutModal } from '@/components/auth/SessionTimeoutModal'
-
-function HeartbeatIndicator() {
-  const lastUpdateTime = useAlertStore((s) => s.lastUpdateTime)
-  const [secondsAgo, setSecondsAgo] = useState(0)
-  const [flash, setFlash] = useState(false)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSecondsAgo(Math.floor((Date.now() - lastUpdateTime.getTime()) / 1000))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [lastUpdateTime])
-
-  useEffect(() => {
-    setFlash(true)
-    setSecondsAgo(0)
-    const timer = setTimeout(() => setFlash(false), 400)
-    return () => clearTimeout(timer)
-  }, [lastUpdateTime])
-
-  return (
-    <div className="ml-auto flex items-center gap-2">
-      <span className="text-[10px] text-ed-muted">
-        Last update: {secondsAgo}s ago
-      </span>
-      <span
-        className={`w-2 h-2 rounded-full transition-colors ${
-          flash ? 'bg-white animate-heartbeat-tick' : 'bg-ed-green animate-pulse'
-        }`}
-        aria-label="System active"
-      />
-    </div>
-  )
-}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -63,6 +33,9 @@ function Dashboard() {
   const [handoffOpen, setHandoffOpen] = useState(false)
   const [fastDispoOpen, setFastDispoOpen] = useState(false)
   const [aiAssistOpen, setAiAssistOpen] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [fhirOpen, setFhirOpen] = useState(false)
 
   const overdueFilter = usePatientStore((s) => s.overdueFilter)
   const setOverdueFilter = usePatientStore((s) => s.setOverdueFilter)
@@ -83,7 +56,7 @@ function Dashboard() {
   return (
     <div className="flex flex-col h-screen bg-ed-bg">
       {/* WORKFLOW ONLY BANNER */}
-      <div className="flex items-center justify-between bg-ed-orange/10 border-b border-ed-orange/20 px-4 py-1">
+      <div className="flex items-center justify-between bg-ed-orange/10 border-b border-ed-orange/20 px-4 py-1" role="banner">
         <span className="text-[10px] font-bold uppercase tracking-widest text-ed-orange">
           WORKFLOW ONLY · NO AUTO-ORDERS
         </span>
@@ -93,8 +66,10 @@ function Dashboard() {
           </span>
           <UserBadge />
           <button
+            type="button"
             onClick={handleLogout}
             className="text-[10px] text-ed-muted hover:text-ed-text transition-colors"
+            aria-label="Sign out of ATLAS"
           >
             Sign Out
           </button>
@@ -106,18 +81,19 @@ function Dashboard() {
       <TopBar />
 
       {loading ? (
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center" role="status" aria-live="polite">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-ed-teal border-t-transparent" />
             <span className="text-sm text-ed-muted">Loading patient data...</span>
           </div>
         </div>
       ) : error ? (
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center" role="alert">
           <div className="flex flex-col items-center gap-3 max-w-sm text-center">
             <span className="text-lg text-ed-red font-bold">Connection Error</span>
             <span className="text-sm text-ed-muted">{error}</span>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               className="mt-2 rounded bg-ed-teal px-4 py-2 text-sm font-bold text-white hover:bg-ed-teal/80 transition-colors"
             >
@@ -127,75 +103,38 @@ function Dashboard() {
         </div>
       ) : (
         <div className="flex flex-1 overflow-hidden">
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto" role="main">
             <TopRiskCards />
-
             <div className="border-t border-ed-border">
               <PatientTable />
             </div>
           </main>
-
           <Sidebar />
         </div>
       )}
 
-      {/* Bottom Action Bar */}
-      <div className="flex items-center gap-2 border-t border-ed-border bg-ed-surface px-4 py-2">
-        <button
-          onClick={() => setTop5Open(true)}
-          className="rounded border border-ed-red/30 bg-ed-red/10 px-3 py-1.5 text-[11px] font-bold text-ed-red hover:bg-ed-red/20 transition-colors"
-        >
-          Top 5 Sick
-        </button>
-        <button
-          onClick={() => setFastDispoOpen(true)}
-          className="rounded border border-ed-green/30 bg-ed-green/10 px-3 py-1.5 text-[11px] font-bold text-ed-green hover:bg-ed-green/20 transition-colors"
-        >
-          Fast Dispos
-        </button>
-        <button
-          onClick={toggleOverdue}
-          className={`rounded border px-3 py-1.5 text-[11px] font-bold transition-colors ${
-            overdueFilter
-              ? 'border-ed-orange bg-ed-orange/20 text-ed-orange'
-              : 'border-ed-orange/30 bg-ed-orange/10 text-ed-orange hover:bg-ed-orange/20'
-          }`}
-        >
-          {overdueFilter ? 'Show All' : 'Overdue'}
-        </button>
-        <button
-          onClick={() => setHandoffOpen(true)}
-          className="rounded border border-ed-teal/30 bg-ed-teal/10 px-3 py-1.5 text-[11px] font-bold text-ed-teal hover:bg-ed-teal/20 transition-colors"
-        >
-          Handoff
-        </button>
-        <button
-          onClick={() => setAiAssistOpen(true)}
-          className="rounded border border-ed-purple/30 bg-ed-purple/10 px-3 py-1.5 text-[11px] font-bold text-ed-purple hover:bg-ed-purple/20 transition-colors"
-        >
-          AI Assist
-        </button>
-
-        <HeartbeatIndicator />
-      </div>
+      <ActionBar
+        overdueFilter={overdueFilter}
+        onToggleOverdue={toggleOverdue}
+        onTop5={() => setTop5Open(true)}
+        onFastDispo={() => setFastDispoOpen(true)}
+        onHandoff={() => setHandoffOpen(true)}
+        onAiAssist={() => setAiAssistOpen(true)}
+        onMetrics={() => setMetricsOpen(true)}
+        onAnalytics={() => setAnalyticsOpen(true)}
+        onFhirImport={() => setFhirOpen(true)}
+      />
 
       {/* Modals */}
       <Top5SickModal open={top5Open} onOpenChange={setTop5Open} />
       <HandoffModal open={handoffOpen} onOpenChange={setHandoffOpen} />
       <FastDispoPanel open={fastDispoOpen} onOpenChange={setFastDispoOpen} />
       <AIAssistPanel open={aiAssistOpen} onOpenChange={setAiAssistOpen} />
+      <MetricsPanel open={metricsOpen} onOpenChange={setMetricsOpen} />
+      <AnalyticsPanel open={analyticsOpen} onOpenChange={setAnalyticsOpen} />
+      <FHIRImportPanel open={fhirOpen} onOpenChange={setFhirOpen} />
       <SessionTimeoutModal />
     </div>
-  )
-}
-
-function UserBadge() {
-  const user = useAuthStore((s) => s.user)
-  if (!user) return null
-  return (
-    <span className="text-[10px] text-ed-muted">
-      {user.name} <span className="text-ed-teal font-bold">({user.role})</span>
-    </span>
   )
 }
 
