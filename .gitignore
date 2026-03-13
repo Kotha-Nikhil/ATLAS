@@ -44,3 +44,11 @@ backend/target/
 *.pem
 *.key
 credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Stray npm files in Rust project
+backend/package-lock.json
