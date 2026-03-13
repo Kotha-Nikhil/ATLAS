@@ -476,6 +476,3 @@ cd frontend && npx tsc --noEmit
 
 ---
 
-## License
-
-See [LICENSE](LICENSE) if present. Otherwise, use under your chosen terms.
