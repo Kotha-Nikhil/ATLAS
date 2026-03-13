@@ -24,6 +24,7 @@
   --animate-shake: shake 0.6s ease-in-out infinite;
   --animate-slide-down: slide-down 0.3s ease-out;
   --animate-heartbeat-tick: heartbeat-tick 0.4s ease-out;
+  --animate-slide-in-right: slide-in-right 0.25s ease-out;
 }
 
 @keyframes pulse-amber {
@@ -57,6 +58,11 @@
 @keyframes heartbeat-tick {
   0% { background-color: #ffffff; }
   100% { background-color: #00ff88; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 
 :root {

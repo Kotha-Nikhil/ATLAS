@@ -32,18 +32,25 @@ function getESIColor(esi: number): string {
 export const PatientRow = memo(function PatientRow({
   patient,
   tick: _tick,
+  onSelect,
 }: {
   patient: Patient
   tick: number
+  onSelect: (patient: Patient) => void
 }) {
   const timeIn = formatTimeIn(patient.timeIn)
   const isWR = patient.bed === 'WR'
 
   return (
     <tr
-      className={`border-b border-ed-border hover:bg-white/[0.02] transition-colors ${
+      className={`border-b border-ed-border hover:bg-white/[0.04] transition-colors cursor-pointer ${
         patient.sepsisWatch ? 'bg-ed-red/5' : ''
       }`}
+      onClick={() => onSelect(patient)}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for patient ${patient.name} in bed ${patient.bed}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(patient) } }}
     >
       <td className="px-3 py-2 text-xs">
         <span className={`font-bold ${isWR ? 'text-ed-muted' : 'text-ed-teal'}`}>
@@ -76,8 +83,8 @@ export const PatientRow = memo(function PatientRow({
 
       <td className="px-3 py-2">
         <div className="flex flex-wrap gap-1">
-          {patient.riskFlags.map((flag, i) => (
-            <RiskBadge key={i} flag={flag} />
+          {patient.riskFlags.map((flag) => (
+            <RiskBadge key={`${flag.label}-${flag.severity}`} flag={flag} />
           ))}
           {patient.sepsisWatch && (
             <span
