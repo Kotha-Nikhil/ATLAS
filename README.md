@@ -1,4 +1,4 @@
-# ATLAS — Automated Triage & Live Alert System
+# ATLAS - Automated Triage & Live Alert System
 
 > Every second. Every patient. Every decision.
 
