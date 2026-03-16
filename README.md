@@ -378,41 +378,6 @@ curl -X POST http://localhost:8080/api/fhir/Patient \
 | **CORS errors** | Set `CORS_ORIGIN` in `backend/.env` to your frontend URL (e.g. `http://localhost:5176`) |
 | **Fresh database** | `docker compose down -v && docker compose up db -d` |
 
----
-
-## What Else You Can Do
-
-Here are directions to extend or improve ATLAS:
-
-### Clinical & Workflow
-- **Real LLM integration** — Replace hardcoded AI suggestions with Anthropic/OpenAI for contextual recommendations.
-- **Order entry** — Add order creation from the dashboard (labs, imaging, consults).
-- **Notes / documentation** — Attach notes or structured documentation to patients.
-- **Disposition workflow** — Structured admit/discharge/transfer flow with checklists.
-
-### Interoperability
-- **Full FHIR support** — Observations, Conditions, Procedures for vitals and diagnoses.
-- **HL7 v2 orders/results** — Extend the pipeline to ORM (orders), OUL (lab results), ORU (observations).
-- **SMART launch** — SMART OAuth 2.0 launch from an EHR or patient portal.
-- **Document storage** — Store PDFs/images and expose via FHIR DocumentReference.
-
-### Data & Analytics
-- **Historical dashboards** — Trends over days/weeks (volume, acuity, throughput).
-- **Predictive models** — LWBS, boarding, or length-of-stay predictions.
-- **Reporting** — PDF/Excel reports for operational metrics.
-- **Alerts configuration** — Admin UI to configure thresholds and escalation rules.
-
-### DevOps & Scale
-- **CI/CD** — GitHub Actions for tests, lint, and deploy.
-- **E2E tests** — Playwright/Cypress for critical user flows.
-- **Kubernetes** — Manifests for production deployment.
-- **Monitoring** — Prometheus metrics, Grafana dashboards, error tracking (e.g. Sentry).
-
-### UX & Polish
-- **Keyboard shortcuts** — Fast navigation (e.g. j/k) and actions.
-- **Dark/light theme** — Toggle for user preference.
-- **Mobile layout** — Responsive or dedicated mobile view.
-- **Offline mode** — Service worker and cached data for limited connectivity.
 
 ---
 
